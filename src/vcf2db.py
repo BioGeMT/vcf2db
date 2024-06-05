@@ -33,7 +33,8 @@ def create_tables(csq_fields, dbname, user, password, host):
     cur.execute("""
         CREATE TABLE samples (
             id SERIAL PRIMARY KEY,
-            sample_name VARCHAR(255) UNIQUE NOT NULL
+            sample_name VARCHAR(255) UNIQUE NOT NULL,
+            sample_grp INTEGER
         )
     """)
 
@@ -100,6 +101,8 @@ def create_tables(csq_fields, dbname, user, password, host):
             alt_id INTEGER NOT NULL,
             sample_id INTEGER NOT NULL,
             genotype VARCHAR(255),
+            genotype_hr VARCHAR(255),
+            is_phased BOOLEAN NOT NULL,
             dp INTEGER,
             gq INTEGER,
             ad JSONB,
@@ -137,6 +140,19 @@ def create_sample(cur, sample_name):
     return cur.fetchone()[0]
 
 
+def map_genotype(gt):
+    genotype_map = {
+        '0/0': 'HOM_REF', '0|0': 'HOM_REF',
+        '0/1': 'HET', '1/0': 'HET', '0|1': 'HET', '1|0': 'HET',
+        '1/1': 'HOM_ALT', '1|1': 'HOM_ALT',
+        '0/2': 'HET_ALT1', '2/0': 'HET_ALT1', '0|2': 'HET_ALT1', '2|0': 'HET_ALT1',
+        '1/2': 'HET_ALT', '2/1': 'HET_ALT', '1|2': 'HET_ALT', '2|1': 'HET_ALT',
+        '2/2': 'HOM_ALT2', '2|2': 'HOM_ALT2',
+        './.': 'MISSING'
+    }
+    return genotype_map.get(gt, 'MISSING')  # Default to 'MISSING' if genotype is not in the map
+
+
 def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params, csq_fields):
     conn_pool = SimpleConnectionPool(1, 10, **conn_params)
     conn = conn_pool.getconn()
@@ -165,8 +181,8 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
         VALUES (%s, %s)
     """
     genotype_insert_query = """
-        INSERT INTO genotypes (alt_id, sample_id, genotype, dp, gq, ad, pl)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO genotypes (alt_id, sample_id, genotype, genotype_hr, is_phased, dp, gq, ad, pl)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     variant_ids = []
@@ -192,9 +208,11 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
             for sample in sample_ids.keys():
                 sample_id = sample_ids[sample]
                 gt = variant.genotypes[sample_id-1]
-                gt_string = '/' if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
+                gt_string = '/'.join(map(str, gt[:2])) if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
+                gt_string = gt_string if gt_string != '-1/-1' else './.'
+                hr_gt = map_genotype(gt_string)  # Convert to a human-readable string
                 dp, gq, ad, pl = 0, 0, None, None
-                genotype_data.append((alt_id, sample_id, gt_string, dp, gq, ad, pl))
+                genotype_data.append((alt_id, sample_id, gt_string, hr_gt, gt[2], dp, gq, ad, pl))
 
     cur.executemany(genotype_insert_query, genotype_data)
 
