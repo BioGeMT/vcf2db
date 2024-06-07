@@ -27,7 +27,7 @@ def create_tables(csq_fields, dbname, user, password, host):
         CREATE TABLE samples (
             id SERIAL PRIMARY KEY,
             sample_name VARCHAR(255) UNIQUE NOT NULL,
-            sample_grp INTEGER
+            sample_grp INTEGER NOT NULL DEFAULT 0
         )
     """)
 
