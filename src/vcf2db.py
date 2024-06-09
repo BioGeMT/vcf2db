@@ -117,6 +117,7 @@ def main():
     cur.close()
     conn.close()
 
+    print("Calculating number of variants and batches for processing...")
     batch_size = args.batch
     num_variants = sum(1 for _ in VCF(args.input))
     num_batches = (num_variants + batch_size - 1) // batch_size

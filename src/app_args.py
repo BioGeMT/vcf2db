@@ -29,7 +29,7 @@ def setup_args():
     parser.add_argument("-u", "--username", help="PostgreSQL user.", required=True)
     parser.add_argument("-p", "--password", help="PostgreSQL password.", required=True)
     parser.add_argument("-l", "--host", help="PostgreSQL host name.", required=True)
-    parser.add_argument("-b", "--batch", type=int, choices=[2000, 5000, 10000, 25000],
+    parser.add_argument("-b", "--batch", type=int, choices=[2000, 5000, 10000, 20000],
                         default=10000, help="Batch size.", required=False)
     
     parser.add_argument('-v', action='version', version='%(prog)s 1.0')
