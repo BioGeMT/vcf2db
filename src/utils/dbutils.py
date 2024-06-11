@@ -34,7 +34,7 @@ def create_tables(csq_fields, dbname, user, password, host):
     cur.execute("""
         CREATE TABLE variants_partitioned (
             id SERIAL,
-            chromosome VARCHAR(10) NOT NULL,
+            chromosome VARCHAR(25) NOT NULL,
             position INTEGER NOT NULL,
             ref VARCHAR(255) NOT NULL,
             quality FLOAT,
@@ -62,7 +62,7 @@ def create_tables(csq_fields, dbname, user, password, host):
     cur.execute("""
         CREATE TABLE alts (
             id SERIAL PRIMARY KEY,
-            variant_chromosome VARCHAR(10) NOT NULL,
+            variant_chromosome VARCHAR(25) NOT NULL,
             variant_position INTEGER NOT NULL,
             variant_id INTEGER NOT NULL,
             alt VARCHAR(255) NOT NULL,

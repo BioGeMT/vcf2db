@@ -127,13 +127,17 @@ def main():
         'dbname': args.database,
         'user': args.username,
         'password': args.password,
-        'host': args.host
+        'host': args.host,
+        'keepalives': 1,
+        'keepalives_idle': 30,
+        'keepalives_interval': 5,
+        'keepalives_count': 5
     }
 
     pool_args = [(args.input, index, batch_size, sample_ids, conn_params, csq_fields) for index in range(num_batches)]
 
     start = timer()
-    with Pool((cpu_count() * 2) // 3) as pool:
+    with Pool((cpu_count()) // 2) as pool:
         pool.starmap(process_batch, pool_args)
     print(f"Elapsed time to process batches: {timer() - start}")
 
