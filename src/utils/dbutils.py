@@ -60,6 +60,16 @@ def create_tables(csq_fields, dbname, user, password, host):
     """)
 
     cur.execute("""
+        CREATE TABLE variants_chrM PARTITION OF variants_partitioned
+        FOR VALUES FROM ('chrM', 0) TO ('chrM', 25000)
+    """)
+
+    # Create a default partition for all other non-standard named chromosomes
+    cur.execute("""
+        CREATE TABLE variants_default PARTITION OF variants_partitioned DEFAULT
+    """)
+
+    cur.execute("""
         CREATE TABLE alts (
             id SERIAL PRIMARY KEY,
             variant_chromosome VARCHAR(25) NOT NULL,
