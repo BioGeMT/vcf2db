@@ -1,4 +1,4 @@
-# pva - Promoter Variant Annotator
+# vcf2db
 
 ## Overview
 
