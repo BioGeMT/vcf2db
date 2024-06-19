@@ -6,8 +6,9 @@
 # email: dfriggieri@gmail.com
 # ---------------------------------------------------------------------------------------
 
-import psycopg2
+import os
 import json
+import psycopg2
 from psycopg2.pool import SimpleConnectionPool
 from multiprocessing import Pool, cpu_count
 from cyvcf2 import VCF
@@ -16,6 +17,9 @@ from timeit import default_timer as timer
 from app_args import setup_args, validate_arguments
 from utils.vcfutils import get_csq_fields, map_genotype
 from utils.dbutils import create_database, create_tables, create_sample
+from utils.fileutils import delete_file, thread_safe_write_to_file
+
+err_annotation_filename = 'annotation_errors.txt'
 
 
 def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params, csq_fields):
@@ -71,21 +75,22 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
                     annotation_id = cur.fetchone()[0]
                     cur.execute(variant_annotation_insert_query, (alt_id, annotation_id))
                 except:
-                    print(f"error: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}")
+                    thread_safe_write_to_file(err_annotation_filename,
+                                              f"error: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}, Annotation: {csq}")
 
-            format = variant.FORMAT
+            variant_format = variant.FORMAT
             for sample in sample_ids.keys():
                 sample_id = sample_ids[sample]
                 gt = variant.genotypes[sample_id - 1]
                 gt_string = '/'.join(map(str, gt[:2])) if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
                 gt_string = gt_string if gt_string != '-1/-1' else './.'
-                dp = int(variant.gt_depths[sample_id - 1]) if 'DP' in format else 0  # Depth
-                gq = int(variant.gt_quals[sample_id - 1]) if 'GQ' in format else 0  # Genotype Quality
+                dp = int(variant.gt_depths[sample_id - 1]) if 'DP' in variant_format else 0  # Depth
+                gq = int(variant.gt_quals[sample_id - 1]) if 'GQ' in variant_format else 0  # Genotype Quality
                 ad = {'gt_ref_depths': int(variant.gt_ref_depths[sample_id - 1]),
-                      'gt_alt_depths': int(variant.gt_alt_depths[sample_id - 1])} if 'AD' in format else None
+                      'gt_alt_depths': int(variant.gt_alt_depths[sample_id - 1])} if 'AD' in variant_format else None
                 pl = {'gt_phred_ll_homref': int(variant.gt_phred_ll_homref[sample_id - 1]),
                       'gt_phred_ll_het': int(variant.gt_phred_ll_het[sample_id - 1]),
-                      'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id - 1])} if 'PL' in format else None
+                      'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id - 1])} if 'PL' in variant_format else None
                 genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), gt[2], dp, gq,
                                       json.dumps(ad), json.dumps(pl)))
 
@@ -106,6 +111,9 @@ def main():
     # Validate input and output arguments and exit if an error is encountered
     if validate_arguments(args) != 0:
         exit(1)
+
+    # Delete annotations log file
+    delete_file(err_annotation_filename)
 
     if args.create is True:
         create_database(args.database, args.username, args.password, args.host)
@@ -147,6 +155,9 @@ def main():
     with Pool((cpu_count()) // 2) as pool:
         pool.starmap(process_batch, pool_args)
     print(f"Elapsed time to process batches: {timer() - start}")
+    print("Variant processing ready!\n")
+    if os.path.exists(err_annotation_filename):
+        print(f'Warning: Errors where encountered during processing and were written to \'{err_annotation_filename}\'!')
 
 
 if __name__ == "__main__":
