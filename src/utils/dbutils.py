@@ -36,7 +36,7 @@ def create_tables(csq_fields, dbname, user, password, host):
             id SERIAL,
             chromosome VARCHAR(25) NOT NULL,
             position INTEGER NOT NULL,
-            ref VARCHAR(255) NOT NULL,
+            ref TEXT NOT NULL,
             quality FLOAT,
             filter VARCHAR(255),
             PRIMARY KEY (chromosome, position, id)
@@ -75,7 +75,7 @@ def create_tables(csq_fields, dbname, user, password, host):
             variant_chromosome VARCHAR(25) NOT NULL,
             variant_position INTEGER NOT NULL,
             variant_id INTEGER NOT NULL,
-            alt VARCHAR(255) NOT NULL,
+            alt TEXT NOT NULL,
             FOREIGN KEY (variant_chromosome, variant_position, variant_id) REFERENCES variants_partitioned (chromosome, position, id) ON DELETE CASCADE
         )
     """)

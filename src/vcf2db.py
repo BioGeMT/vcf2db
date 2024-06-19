@@ -66,21 +66,28 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
             csq_annotations = variant.INFO.get('CSQ', '').split(',')
             for csq in csq_annotations:
                 annotation_values = csq.split('|')
-                cur.execute(annotation_insert_query, annotation_values)
-                annotation_id = cur.fetchone()[0]
-                cur.execute(variant_annotation_insert_query, (alt_id, annotation_id))
+                try:
+                    cur.execute(annotation_insert_query, annotation_values)
+                    annotation_id = cur.fetchone()[0]
+                    cur.execute(variant_annotation_insert_query, (alt_id, annotation_id))
+                except:
+                    print(f"error: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}")
 
             format = variant.FORMAT
             for sample in sample_ids.keys():
                 sample_id = sample_ids[sample]
-                gt = variant.genotypes[sample_id-1]
+                gt = variant.genotypes[sample_id - 1]
                 gt_string = '/'.join(map(str, gt[:2])) if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
                 gt_string = gt_string if gt_string != '-1/-1' else './.'
-                dp = int(variant.gt_depths[sample_id-1]) if 'DP' in format else 0  # Depth
-                gq = int(variant.gt_quals[sample_id-1]) if 'GQ' in format else 0   # Genotype Quality
-                ad = {'gt_ref_depths': int(variant.gt_ref_depths[sample_id-1]), 'gt_alt_depths': int(variant.gt_alt_depths[sample_id-1])} if 'AD' in format else None
-                pl = {'gt_phred_ll_homref': int(variant.gt_phred_ll_homref[sample_id-1]), 'gt_phred_ll_het': int(variant.gt_phred_ll_het[sample_id-1]), 'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id-1])} if 'PL' in format else None
-                genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), gt[2], dp, gq, json.dumps(ad), json.dumps(pl)))
+                dp = int(variant.gt_depths[sample_id - 1]) if 'DP' in format else 0  # Depth
+                gq = int(variant.gt_quals[sample_id - 1]) if 'GQ' in format else 0  # Genotype Quality
+                ad = {'gt_ref_depths': int(variant.gt_ref_depths[sample_id - 1]),
+                      'gt_alt_depths': int(variant.gt_alt_depths[sample_id - 1])} if 'AD' in format else None
+                pl = {'gt_phred_ll_homref': int(variant.gt_phred_ll_homref[sample_id - 1]),
+                      'gt_phred_ll_het': int(variant.gt_phred_ll_het[sample_id - 1]),
+                      'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id - 1])} if 'PL' in format else None
+                genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), gt[2], dp, gq,
+                                      json.dumps(ad), json.dumps(pl)))
 
     cur.executemany(genotype_insert_query, genotype_data)
 
