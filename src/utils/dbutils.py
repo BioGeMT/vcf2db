@@ -100,7 +100,7 @@ def create_tables(csq_fields, dbname, user, password, host):
 
     cur.execute("""
         CREATE TABLE genotypes (
-            id SERIAL PRIMARY KEY,
+            id BIGSERIAL PRIMARY KEY,
             alt_id INTEGER NOT NULL,
             sample_id INTEGER NOT NULL,
             genotype VARCHAR(255),
