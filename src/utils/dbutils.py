@@ -23,11 +23,20 @@ def create_tables(csq_fields, dbname, user, password, host):
     conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
     cur = conn.cursor()
 
+    # sample_grp is an integer denoting case, control, etc
     cur.execute("""
         CREATE TABLE samples (
             id SERIAL PRIMARY KEY,
             sample_name VARCHAR(255) UNIQUE NOT NULL,
             sample_grp INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
+    # sample_grp_class is the human readable equivalent of sample_grp
+    cur.execute("""
+	    CREATE TABLE sample_class (
+            id SERIAL,
+            grp_class VARCHAR(50) NOT NULL
         )
     """)
 
