@@ -28,9 +28,14 @@ Change _user_ to a user login and the associated _password_.
 
 ## Examples
 ### Command line execution examples:
+#### To start a Database from scratch and populate with a VCF
 - ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -b 1000 -c
-
-#### Multi-core execution
+#### To update annotations in an existing database
+- ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a
+#### To resume an interrupted update:
+- ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a -r
+#### If VEP fields changed between versions:
+- ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a -f
   
 
 ## Requirements
@@ -43,10 +48,10 @@ Change _user_ to a user login and the associated _password_.
 * 8 GB RAM
 
 ### Python requirements
-* Python 3.10, 3.11 -- see http://www.python.org
+* Python 3.10, 3.11, 3.12 -- see http://www.python.org
 
 ### Python dependencies
-
+* psycopg2, cyvcf2
 
 ### Installation
 To install the application from package: python setup.py install
