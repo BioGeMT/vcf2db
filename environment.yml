@@ -1,0 +1,8 @@
+name: vcf2db
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.10,<3.13
+  - psycopg2
+  - cyvcf2

@@ -26,18 +26,6 @@ Create a postgres login using the following SQL statement:
 
 Change _user_ to a user login and the associated _password_.
 
-## Examples
-### Command line execution examples:
-#### To start a Database from scratch and populate with a VCF
-- ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -b 1000 -c
-#### To update annotations in an existing database
-- ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a
-#### To resume an interrupted update:
-- ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a -r
-#### If VEP fields changed between versions:
-- ./vcf2db -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a -f
-  
-
 ## Requirements
 ### Recommended system requirements:
 * 8-Core CPU
@@ -54,13 +42,36 @@ Change _user_ to a user login and the associated _password_.
 * psycopg2, cyvcf2
 
 ### Installation
-To install the application from package: python setup.py install
+#### Using Conda (Recommended)
+Create and activate the conda environment:
+```bash
+conda env create -f environment.yml
+conda activate vcf2db
+```
+
+#### Running the application
+##### To start a Database from scratch and populate with a VCF
+```bash
+python vcf2db.py -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -b 1000 -c
+```
+##### To update annotations in an existing database
+```bash
+python vcf2db.py -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a
+```
+##### To resume an interrupted update
+```bash
+python vcf2db.py -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a -r
+```
+##### If VEP fields changed between versions
+```bash
+python vcf2db.py -i your_snp_vcf_file.vcf -d vcf2db -u user -p password -l localhost -a -f
+```
 
 ## Application structure
 * README.md -- This file
 * LICENSE.md -- Application license model.
 * MANIFEST.in -- Configures which files to include in releases.
-* setup.py -- Installation file.
+* environment.yml -- Conda environment configuration file.
 * src/ -- Source Directory
 * src/vcf2db.py -- Main orchestrator and application launch file.
 
