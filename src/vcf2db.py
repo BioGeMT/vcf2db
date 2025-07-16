@@ -10,7 +10,7 @@ import os
 import json
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 from cyvcf2 import VCF
 from timeit import default_timer as timer
 
@@ -157,7 +157,7 @@ def main():
     pool_args = [(args.input, index, batch_size, sample_ids, conn_params, csq_fields) for index in range(num_batches)]
 
     start = timer()
-    with Pool((cpu_count()) // 2) as pool:
+    with Pool(args.cores) as pool:
         pool.starmap(process_batch, pool_args)
     print(f"Elapsed time to process batches: {timer() - start}")
     print("Variant processing ready!\n")
