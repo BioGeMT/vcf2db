@@ -82,8 +82,13 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
             for sample in sample_ids.keys():
                 sample_id = sample_ids[sample]
                 gt = variant.genotypes[sample_id - 1]
-                gt_string = '/'.join(map(str, gt[:2])) if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
-                gt_string = gt_string if gt_string != '-1/-1' else './.'
+                if variant.CHROM in ['MT', 'chrMT', 'Y', 'chrY']: # Haploid chromosomes
+                    gt_string = str(gt[0]) if gt[0] != -1 else '.'
+                    is_phased = False
+                else:
+                    gt_string = '/'.join(map(str, gt[:2])) if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
+                    gt_string = gt_string if gt_string != '-1/-1' else './.'
+                    is_phased = gt[2]
                 dp = int(variant.gt_depths[sample_id - 1]) if 'DP' in variant_format else 0  # Depth
                 gq = int(variant.gt_quals[sample_id - 1]) if 'GQ' in variant_format else 0  # Genotype Quality
                 ad = {'gt_ref_depths': int(variant.gt_ref_depths[sample_id - 1]),
@@ -91,7 +96,7 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
                 pl = {'gt_phred_ll_homref': int(variant.gt_phred_ll_homref[sample_id - 1]),
                       'gt_phred_ll_het': int(variant.gt_phred_ll_het[sample_id - 1]),
                       'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id - 1])} if 'PL' in variant_format else None
-                genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), gt[2], dp, gq,
+                genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), is_phased, dp, gq,
                                       json.dumps(ad), json.dumps(pl)))
 
     cur.executemany(genotype_insert_query, genotype_data)
