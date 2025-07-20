@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ---------------------------------------------------------------------------------------
-# Application to read a one sample or multi-sample VCF file and save it to a postgres DB
+# Application to read one sample or multi-sample VCF file and save it to a postgres DB
 #
 # Author: Donald Friggieri
 # email: dfriggieri@gmail.com
@@ -10,7 +10,7 @@ import os
 import json
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 from cyvcf2 import VCF
 from timeit import default_timer as timer
 
@@ -40,15 +40,18 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
         VALUES (%s, %s, %s, %s)
         RETURNING id
     """
-    annotation_insert_query = """
-        INSERT INTO annotations ({})
-        VALUES ({})
-        RETURNING id
-    """.format(", ".join(csq_fields), ", ".join(["%s"] * len(csq_fields)))
-    variant_annotation_insert_query = """
-        INSERT INTO variant_annotations (alt_id, annotation_id)
-        VALUES (%s, %s)
-    """
+
+    if len(csq_fields) != 0:
+        annotation_insert_query = """
+            INSERT INTO annotations ({})
+            VALUES ({})
+            RETURNING id
+        """.format(", ".join(csq_fields), ", ".join(["%s"] * len(csq_fields)))
+        variant_annotation_insert_query = """
+            INSERT INTO variant_annotations (alt_id, annotation_id)
+            VALUES (%s, %s)
+        """
+
     genotype_insert_query = """
         INSERT INTO genotypes (alt_id, sample_id, genotype, genotype_hr, is_phased, dp, gq, ad, pl)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -67,23 +70,33 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
             cur.execute(alt_insert_query, (variant.CHROM, variant.POS, variant_id, alt))
             alt_id = cur.fetchone()[0]
 
-            csq_annotations = variant.INFO.get('CSQ', '').split(',')
-            for csq in csq_annotations:
-                annotation_values = csq.split('|')
-                try:
-                    cur.execute(annotation_insert_query, annotation_values)
-                    annotation_id = cur.fetchone()[0]
-                    cur.execute(variant_annotation_insert_query, (alt_id, annotation_id))
-                except:
-                    thread_safe_write_to_file(err_annotation_filename,
-                                              f"error: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}, Annotation: {csq}")
+            if len(csq_fields) != 0:
+                csq_annotations = variant.INFO.get('CSQ', '').split(',')
+                for csq in csq_annotations:
+                    annotation_values = csq.split('|')
+                    try:
+                        cur.execute(annotation_insert_query, annotation_values)
+                        annotation_id = cur.fetchone()[0]
+                        cur.execute(variant_annotation_insert_query, (alt_id, annotation_id))
+                    except:
+                        thread_safe_write_to_file(err_annotation_filename,
+                                                  f"error: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}, Annotation: {csq}")
 
             variant_format = variant.FORMAT
             for sample in sample_ids.keys():
                 sample_id = sample_ids[sample]
+
+                # Get genotype for sample
                 gt = variant.genotypes[sample_id - 1]
-                gt_string = '/'.join(map(str, gt[:2])) if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
-                gt_string = gt_string if gt_string != '-1/-1' else './.'
+                # Old style genotype reporting for diploid chromosomes (eg. chr Y)
+                if len(gt) == 2:
+                    gt_string = str(gt[0]) if gt[0] != -1 else '.'
+                    is_phased = gt[1]
+                else:
+                    gt_string = '/'.join(map(str, gt[:2])) if gt[2] is False else '|'.join(map(str, gt[:2]))  # Genotype
+                    gt_string = gt_string if gt_string != '-1/-1' else './.'
+                    is_phased = gt[2]
+
                 dp = int(variant.gt_depths[sample_id - 1]) if 'DP' in variant_format else 0  # Depth
                 gq = int(variant.gt_quals[sample_id - 1]) if 'GQ' in variant_format else 0  # Genotype Quality
                 ad = {'gt_ref_depths': int(variant.gt_ref_depths[sample_id - 1]),
@@ -91,7 +104,7 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
                 pl = {'gt_phred_ll_homref': int(variant.gt_phred_ll_homref[sample_id - 1]),
                       'gt_phred_ll_het': int(variant.gt_phred_ll_het[sample_id - 1]),
                       'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id - 1])} if 'PL' in variant_format else None
-                genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), gt[2], dp, gq,
+                genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), is_phased, dp, gq,
                                       json.dumps(ad), json.dumps(pl)))
 
     cur.executemany(genotype_insert_query, genotype_data)
@@ -152,7 +165,7 @@ def main():
     pool_args = [(args.input, index, batch_size, sample_ids, conn_params, csq_fields) for index in range(num_batches)]
 
     start = timer()
-    with Pool((cpu_count()) // 2) as pool:
+    with Pool(args.cores) as pool:
         pool.starmap(process_batch, pool_args)
     print(f"Elapsed time to process batches: {timer() - start}")
     print("Variant processing ready!\n")

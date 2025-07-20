@@ -89,23 +89,24 @@ def create_tables(csq_fields, dbname, user, password, host):
         )
     """)
 
-    annotation_columns = ", ".join([f"{field} TEXT" for field in csq_fields])
-    cur.execute(f"""
-        CREATE TABLE annotations (
-            id SERIAL PRIMARY KEY,
-            {annotation_columns}
-        )
-    """)
+    if len(csq_fields) != 0:
+        annotation_columns = ", ".join([f"{field} TEXT" for field in csq_fields])
+        cur.execute(f"""
+            CREATE TABLE annotations (
+                id SERIAL PRIMARY KEY,
+                {annotation_columns}
+            )
+        """)
 
-    cur.execute("""
-        CREATE TABLE variant_annotations (
-            id SERIAL PRIMARY KEY,
-            alt_id INTEGER NOT NULL,
-            annotation_id INTEGER NOT NULL,
-            FOREIGN KEY (alt_id) REFERENCES alts (id) ON DELETE CASCADE,
-            FOREIGN KEY (annotation_id) REFERENCES annotations (id) ON DELETE CASCADE
-        )
-    """)
+        cur.execute("""
+            CREATE TABLE variant_annotations (
+                id SERIAL PRIMARY KEY,
+                alt_id INTEGER NOT NULL,
+                annotation_id INTEGER NOT NULL,
+                FOREIGN KEY (alt_id) REFERENCES alts (id) ON DELETE CASCADE,
+                FOREIGN KEY (annotation_id) REFERENCES annotations (id) ON DELETE CASCADE
+            )
+        """)
 
     cur.execute("""
         CREATE TABLE genotypes (
