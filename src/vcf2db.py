@@ -80,7 +80,7 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
                         cur.execute(variant_annotation_insert_query, (alt_id, annotation_id))
                     except:
                         thread_safe_write_to_file(err_annotation_filename,
-                                                  f"error: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}, Annotation: {csq}")
+                                                  f"error - annotation: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}, Annotation: {csq}")
 
             variant_format = variant.FORMAT
             for sample in sample_ids.keys():
@@ -97,13 +97,19 @@ def process_batch(vcf_filepath, batch_index, batch_size, sample_ids, conn_params
                     gt_string = gt_string if gt_string != '-1/-1' else './.'
                     is_phased = gt[2]
 
-                dp = int(variant.gt_depths[sample_id - 1]) if 'DP' in variant_format else 0  # Depth
-                gq = int(variant.gt_quals[sample_id - 1]) if 'GQ' in variant_format else 0  # Genotype Quality
-                ad = {'gt_ref_depths': int(variant.gt_ref_depths[sample_id - 1]),
-                      'gt_alt_depths': int(variant.gt_alt_depths[sample_id - 1])} if 'AD' in variant_format else None
-                pl = {'gt_phred_ll_homref': int(variant.gt_phred_ll_homref[sample_id - 1]),
-                      'gt_phred_ll_het': int(variant.gt_phred_ll_het[sample_id - 1]),
-                      'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id - 1])} if 'PL' in variant_format else None
+                dp = 0; gq = 0; ad = None; pl = None
+                try:
+                    dp = int(variant.gt_depths[sample_id - 1]) if 'DP' in variant_format else 0  # Depth
+                    gq = int(variant.gt_quals[sample_id - 1]) if 'GQ' in variant_format else 0  # Genotype Quality
+                    ad = {'gt_ref_depths': int(variant.gt_ref_depths[sample_id - 1]),
+                          'gt_alt_depths': int(variant.gt_alt_depths[sample_id - 1])} if 'AD' in variant_format else None
+                    pl = {'gt_phred_ll_homref': int(variant.gt_phred_ll_homref[sample_id - 1]),
+                          'gt_phred_ll_het': int(variant.gt_phred_ll_het[sample_id - 1]),
+                        'gt_phred_ll_homalt': int(variant.gt_phred_ll_homalt[sample_id - 1])} if 'PL' in variant_format else None
+                except IndexError:
+                    thread_safe_write_to_file(err_annotation_filename,
+                                              f"error - format: variantId: {variant_id}, Chromosome: {chromosome}, Position: {position}, Sample: {sample}")
+
                 genotype_data.append((alt_id, sample_id, gt_string, map_genotype(gt_string), is_phased, dp, gq,
                                       json.dumps(ad), json.dumps(pl)))
 
