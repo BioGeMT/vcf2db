@@ -4,10 +4,9 @@
 # Author: Donald Friggieri
 # email: dfriggieri@gmail.com
 # ---------------------------------------------------------------------------------------
-
+from os import cpu_count
 from pathlib import Path
 from argparse import ArgumentParser
-from multiprocessing import cpu_count
 
 
 def setup_args():
@@ -32,8 +31,9 @@ def setup_args():
     parser.add_argument("-l", "--host", help="PostgreSQL host name.", required=True)
     parser.add_argument("-b", "--batch", type=int, choices=[2000, 5000, 10000, 20000],
                         default=10000, help="Batch size.", required=False)
-    parser.add_argument("--cores", type=int, default=cpu_count() // 2,
-                        help=f"Number of CPU cores to use for processing. Default: {cpu_count() // 2} (half of available cores).", required=False)
+    parser.add_argument("-t", "--cores", type=int, default=cpu_count() // 2,
+                        help=f"Number of CPU cores/threads to use for processing. "
+                             f"Default: {cpu_count() // 2} (half of available cores).", required=False)
     
     parser.add_argument('-v', action='version', version='%(prog)s 1.0')
     
@@ -67,7 +67,7 @@ def validate_arguments(args):
     if args.cores < 1:
         print('ERROR: Number of cores must be at least 1')
         return -1
-    
+
     if args.cores > cpu_count():
         print(f'ERROR: Number of cores ({args.cores}) cannot exceed available cores ({cpu_count()})')
         return -1
