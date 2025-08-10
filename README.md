@@ -63,9 +63,21 @@ To install the application from package: python setup.py install
 * setup.py -- Installation file.
 * src/ -- Source Directory
 * src/vcf2db.py -- Main orchestrator and application launch file.
+* src/utils/ -- utilities to write files, create sql queries, and vcf related functions.
+* src/tools/ -- additional/optional tools to create a genes tables from gtf file and create synthetic gene expression data.
 
 ## Additional resources
-
+### Gene table (tools/gen_genes_table.py) 
+Create a genes table based on gtf annotations. The genes table is made up of the gene 
+name, gene id, gene type, chromosome, start position, end position and strand.<br/><br/>
+Example usage: 
+* ./gen_genes_table input.gtf --host localhost --database vcf2db --username user --password password
+* ./gen_genes_table input.gtf --host localhost --database vcf2db --username user --password password --force-reload
+### Synthetic transcriptomics (tools/gen_synthetic_transcriptomics.py) 
+Generate a synthetic transcriptomics table for testing purposes.<br/><br/>
+Example usage: 
+* ./gen_synthetic_transcriptomics --host localhost --database vcf2db --username user --password password --protein-coding-only --seed 25 
+* ./gen_synthetic_transcriptomics --host localhost --database vcf2db --username user --password password --protein-coding-only --seed 25 --force-reload
 
 ### To package application
 python setup.py sdist
