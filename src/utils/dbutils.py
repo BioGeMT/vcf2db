@@ -49,28 +49,28 @@ def create_tables(csq_fields, dbname, user, password, host):
             quality FLOAT,
             filter VARCHAR(255),
             PRIMARY KEY (chromosome, position, id)
-        ) PARTITION BY RANGE (chromosome, position)
+        ) PARTITION BY LIST (chromosome)
     """)
 
     for chromosome in range(1, 23):
         cur.execute(f"""
             CREATE TABLE variants_chr{chromosome} PARTITION OF variants_partitioned
-            FOR VALUES FROM ('chr{chromosome}', 0) TO ('chr{chromosome}', 250000000)
+            FOR VALUES IN ('chr{chromosome}', '{chromosome}')
         """)
 
     cur.execute("""
         CREATE TABLE variants_chrX PARTITION OF variants_partitioned
-        FOR VALUES FROM ('chrX', 0) TO ('chrX', 250000000)
+        FOR VALUES IN ('chrX', 'X')
     """)
 
     cur.execute("""
         CREATE TABLE variants_chrY PARTITION OF variants_partitioned
-        FOR VALUES FROM ('chrY', 0) TO ('chrY', 250000000)
+        FOR VALUES IN ('chrY', 'Y')
     """)
 
     cur.execute("""
         CREATE TABLE variants_chrM PARTITION OF variants_partitioned
-        FOR VALUES FROM ('chrM', 0) TO ('chrM', 25000)
+        FOR VALUES IN ('chrM', 'M')
     """)
 
     # Create a default partition for all other non-standard named chromosomes
